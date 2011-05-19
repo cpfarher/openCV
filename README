@@ -1,3 +1,7 @@
+==== ====
+** pointsTracking ** => Lucas-Kanade algorithm
+** sutf ** => surf algorithm (static images)
+
 For compile examples of OpenCv installed on ubuntu with aptitude command:
 /usr/share/doc/opencv-doc/examples/c/c$ ./build_all.sh 
 
