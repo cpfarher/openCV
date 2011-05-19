@@ -1,4 +1,11 @@
 ------------------------------------------------------------------------
+Execute project (need openCv Installed in the system).
+1- Go to project
+2- ./{Project}/Debug/main where {Project} is the project folder name
+	e.g. ./pointsTracking/Debug/main
+	e.g. ./surf/Debug/main param1 param2
+
+------------------------------------------------------------------------
 Projects in openCV git repository:
 
 * pointsTracking	=> Lucas-Kanade algorithm
