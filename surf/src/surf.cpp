@@ -18,9 +18,9 @@ using namespace std;
 
 // define whether to use approximate nearest-neighbor search
 #define USE_FLANN
-int tecla;
+
 IplImage *image = 0;
-IplImage* frame;
+
 double compareSURFDescriptors(const float* d1, const float* d2, double best,
 		int length) {
 	double total_cost = 0;
@@ -217,18 +217,6 @@ int main(int argc, char** argv) {
 	cvExtractSURF(object, 0, &objectKeypoints, &objectDescriptors, storage,
 			params);
 	printf("Object Descriptors: %d\n", objectDescriptors->total);
-
-
-
-	CvCapture *capture = cvCreateCameraCapture( CV_CAP_ANY );
-	int	ancho = 640, alto = 480;
-	cvSetCaptureProperty(capture,CV_CAP_PROP_FRAME_WIDTH,ancho);
-	cvSetCaptureProperty(capture,CV_CAP_PROP_FRAME_HEIGHT,alto);
-while (true){
-	frame = cvQueryFrame( capture );
-	image = cvCreateImage(cvSize(frame->width,frame->height),frame->depth,1);
-	cvCvtColor(frame, image, CV_BGR2GRAY );
-
 	cvExtractSURF(image, 0, &imageKeypoints, &imageDescriptors, storage, params);
 	printf("Image Descriptors: %d\n", imageDescriptors->total);
 	tt = (double) cvGetTickCount() - tt;
@@ -275,7 +263,7 @@ while (true){
 	}
 
 	cvShowImage("Object Correspond", correspond);
-	/*for (i = 0; i < objectKeypoints->total; i++) {
+	for (i = 0; i < objectKeypoints->total; i++) {
 		CvSURFPoint* r = (CvSURFPoint*) cvGetSeqElem(objectKeypoints, i);
 		CvPoint center;
 		int radius;
@@ -285,15 +273,9 @@ while (true){
 		cvCircle(object_color, center, radius, colors[0], 1, 8, 0);
 	}
 	cvShowImage("Object", object_color);
-*/
-	//cvWaitKey(0);
-	// Milisegundos de espera para reconocer la tecla presionada
-			tecla = cvWaitKey(20);
 
-			//If ESC key pressed, Key=0x10001B under OpenCV 0.9.7(linux version),
-			//remove higher bits using AND operator
-			if ( ((char)tecla & 255) == 27 ) break;
-}
+	cvWaitKey(0);
+
 	cvDestroyWindow("Object");
 	cvDestroyWindow("Object SURF");
 	cvDestroyWindow("Object Correspond");

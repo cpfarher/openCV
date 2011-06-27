@@ -15,6 +15,7 @@
 #include <vector>
 
 using namespace std;
+//christian@christian-laptop:~/Documentos/TESIS/openCV/surfanimado/Debug$ ./main ../../surf/src/Temp/revi.jpg ../../surf/src/pizarron/640-480.jpg
 
 // define whether to use approximate nearest-neighbor search
 #define USE_FLANN
