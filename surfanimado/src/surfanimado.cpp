@@ -3,6 +3,9 @@
  * Further Information Refer to "SURF: Speed-Up Robust Feature"
  * Author: Liu Liu
  * liuliu.1987+opencv@gmail.com
+ *
+ * modified by: Christian Pfarher
+ * c.pfarher@gmail.com
  */
 
 #include <cv.h>
@@ -185,12 +188,12 @@ int locatePlanarObject(const CvSeq* objectKeypoints,
 int main(int argc, char** argv) {
 	const char* object_filename = argc == 3 ? argv[1]
 			: "../src/pizarron/redimensiones/Foto0303redim.jpg";
-	const char* scene_filename = argc == 3 ? argv[2]
-			: "../src/pizarron/redimensiones/Foto0303redim.jpg";
+	//const char* scene_filename = argc == 3 ? argv[2]: "../src/pizarron/redimensiones/Foto0303redim.jpg";
+	double hessianThreshold = (argc == 3) ? atof(argv[2]):500;
 
 	CvMemStorage* storage = cvCreateMemStorage(0);
 
-	cvNamedWindow("Object", 1);
+	//cvNamedWindow("Object", 1);
 	cvNamedWindow("Object Correspond", 1);
 
 	static CvScalar colors[] = { { { 0, 0, 255 } }, { { 0, 128, 255 } }, { { 0,
@@ -199,11 +202,11 @@ int main(int argc, char** argv) {
 			{ { 255, 255, 255 } } };
 
 	IplImage* object = cvLoadImage(object_filename, CV_LOAD_IMAGE_GRAYSCALE );
-	IplImage* image = cvLoadImage(scene_filename, CV_LOAD_IMAGE_GRAYSCALE );
-	if (!object || !image) {
-		fprintf(stderr, "Can not load %s and/or %s\n"
-			"Usage: find_obj [<object_filename> <scene_filename>]\n",
-				object_filename, scene_filename);
+	//IplImage* image = cvLoadImage(scene_filename, CV_LOAD_IMAGE_GRAYSCALE );
+	if (!object) {
+		fprintf(stderr, "Can not load %s \n"
+			"Usage: find_obj [<object_filename>]\n[<hessianThreshold>]",
+				object_filename, hessianThreshold);
 		exit(-1);
 	}
 	IplImage* object_color = cvCreateImage(cvGetSize(object), 8, 3);
@@ -212,7 +215,12 @@ int main(int argc, char** argv) {
 	CvSeq *objectKeypoints = 0, *objectDescriptors = 0;
 	CvSeq *imageKeypoints = 0, *imageDescriptors = 0;
 	int i;
-	CvSURFParams params = cvSURFParams(500, 1);
+
+	CvSURFParams params = cvSURFParams(hessianThreshold, 1);
+	params.extended=0;
+	params.nOctaveLayers=2;
+	params.nOctaves=4;
+//params.hessianThreshold=10;
 
 	double tt = (double) cvGetTickCount();
 	cvExtractSURF(object, 0, &objectKeypoints, &objectDescriptors, storage,
@@ -234,8 +242,8 @@ while (true){
 	printf("Image Descriptors: %d\n", imageDescriptors->total);
 	tt = (double) cvGetTickCount() - tt;
 	printf("Extraction time = %gms\n", tt / (cvGetTickFrequency() * 1000.));
-	CvPoint src_corners[4] = { { 0, 0 }, { object->width, 0 }, { object->width,
-			object->height }, { 0, object->height } };
+	CvPoint src_corners[4] = { { 256, 156 }, { 429, 182 }, { 381,
+			411 }, { 212, 380} };
 	CvPoint dst_corners[4];
 	IplImage* correspond = cvCreateImage(cvSize(image->width, object->height
 			+ image->height), 8, 1);
@@ -249,6 +257,9 @@ while (true){
 #ifdef USE_FLANN
 	printf("Using approximate nearest neighbor search\n");
 #endif
+	//texto
+//	CvFont texto_fuente=cvFont(5.0,1.0);
+//	cvInitFont(& texto_fuente, 3, 5.0, 5.0);
 
 	if (locatePlanarObject(objectKeypoints, objectDescriptors, imageKeypoints,
 			imageDescriptors, src_corners, dst_corners)) {
@@ -256,7 +267,8 @@ while (true){
 			CvPoint r1 = dst_corners[i % 4];
 			CvPoint r2 = dst_corners[(i + 1) % 4];
 			cvLine(correspond, cvPoint(r1.x, r1.y + object->height), cvPoint(
-					r2.x, r2.y + object->height), colors[8]);
+					r2.x, r2.y + object->height), colors[8], 10);
+			//cvPutText(correspond, (const char *) "preuba", cvPoint(r1.x,r1.y + object->height), &texto_fuente, colors[8]);
 		}
 	}
 	vector<int> ptpairs;
@@ -266,6 +278,8 @@ while (true){
 #else
 	findPairs( objectKeypoints, objectDescriptors, imageKeypoints, imageDescriptors, ptpairs );
 #endif
+
+	//linea unión puntos corresponedencia:
 	for (i = 0; i < (int) ptpairs.size(); i += 2) {
 		CvSURFPoint* r1 = (CvSURFPoint*) cvGetSeqElem(objectKeypoints,
 				ptpairs[i]);
@@ -289,7 +303,8 @@ while (true){
 */
 	//cvWaitKey(0);
 	// Milisegundos de espera para reconocer la tecla presionada
-			tecla = cvWaitKey(20);
+			tecla = cvWaitKey(1);
+
 
 			//If ESC key pressed, Key=0x10001B under OpenCV 0.9.7(linux version),
 			//remove higher bits using AND operator
