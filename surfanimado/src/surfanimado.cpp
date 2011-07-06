@@ -186,10 +186,11 @@ int locatePlanarObject(const CvSeq* objectKeypoints,
 }
 
 int main(int argc, char** argv) {
-	const char* object_filename = argc == 3 ? argv[1]
+	const char* object_filename = argc == 4 ? argv[1]
 			: "../src/pizarron/redimensiones/Foto0303redim.jpg";
 	//const char* scene_filename = argc == 3 ? argv[2]: "../src/pizarron/redimensiones/Foto0303redim.jpg";
-	double hessianThreshold = (argc == 3) ? atof(argv[2]):500;
+	double hessianThreshold = (argc == 4) ? atof(argv[2]):300;
+	int enableLines = (argc == 4) ? atof(argv[3]):0;
 
 	CvMemStorage* storage = cvCreateMemStorage(0);
 
@@ -280,26 +281,29 @@ while (true){
 #endif
 
 	//linea unión puntos corresponedencia:
-	for (i = 0; i < (int) ptpairs.size(); i += 2) {
-		CvSURFPoint* r1 = (CvSURFPoint*) cvGetSeqElem(objectKeypoints,
-				ptpairs[i]);
-		CvSURFPoint* r2 = (CvSURFPoint*) cvGetSeqElem(imageKeypoints, ptpairs[i
-				+ 1]);
-		cvLine(correspond, cvPointFrom32f(r1->pt), cvPoint(cvRound(r2->pt.x),
-				cvRound(r2->pt.y + object->height)), colors[8]);
+	if (enableLines){
+		for (i = 0; i < (int) ptpairs.size(); i += 2) {
+			CvSURFPoint* r1 = (CvSURFPoint*) cvGetSeqElem(objectKeypoints,
+					ptpairs[i]);
+			CvSURFPoint* r2 = (CvSURFPoint*) cvGetSeqElem(imageKeypoints, ptpairs[i
+					+ 1]);
+			cvLine(correspond, cvPointFrom32f(r1->pt), cvPoint(cvRound(r2->pt.x),
+					cvRound(r2->pt.y + object->height)), colors[8]);
+		}
 	}
-
 	cvShowImage("Object Correspond", correspond);
-	/*for (i = 0; i < objectKeypoints->total; i++) {
-		CvSURFPoint* r = (CvSURFPoint*) cvGetSeqElem(objectKeypoints, i);
-		CvPoint center;
-		int radius;
-		center.x = cvRound(r->pt.x);
-		center.y = cvRound(r->pt.y);
-		radius = cvRound(r->size * 1.2 / 9. * 2);
-		cvCircle(object_color, center, radius, colors[0], 1, 8, 0);
-	}
-	cvShowImage("Object", object_color);
+	//surf points
+	/*
+		for (i = 0; i < objectKeypoints->total; i++) {
+			CvSURFPoint* r = (CvSURFPoint*) cvGetSeqElem(objectKeypoints, i);
+			CvPoint center;
+			int radius;
+			center.x = cvRound(r->pt.x);
+			center.y = cvRound(r->pt.y);
+			radius = cvRound(r->size * 1.2 / 9. * 2);
+			cvCircle(object_color, center, radius, colors[0], 1, 8, 0);
+		}
+		cvShowImage("Object", object_color);
 */
 	//cvWaitKey(0);
 	// Milisegundos de espera para reconocer la tecla presionada
