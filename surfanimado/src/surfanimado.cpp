@@ -186,44 +186,53 @@ int locatePlanarObject(const CvSeq* objectKeypoints,
 }
 
 int main(int argc, char** argv) {
-	const char* object_filename = argc == 4 ? argv[1]
-			: "../src/pizarron/redimensiones/Foto0303redim.jpg";
-	//const char* scene_filename = argc == 3 ? argv[2]: "../src/pizarron/redimensiones/Foto0303redim.jpg";
-	double hessianThreshold = (argc == 4) ? atof(argv[2]):300;
-	int enableLines = (argc == 4) ? atof(argv[3]):0;
+	const char* object_filename = (argc >= 2) ? argv[1]
+			: "./src/revi.jpg"; //default object image to search
+	double hessianThreshold = (argc >= 3) ? atof(argv[2]):250;
+	int enableLines = (argc >= 4) ? atof(argv[3]):0; //enable or dissable lines
 
 	CvMemStorage* storage = cvCreateMemStorage(0);
 
-	//cvNamedWindow("Object", 1);
-	cvNamedWindow("Object Correspond", 1);
+	cvNamedWindow("Object Correspond"); //create window for show image
+	//cvNamedWindow("tmp"); //create window for show image
 
-	static CvScalar colors[] = { { { 0, 0, 255 } }, { { 0, 128, 255 } }, { { 0,
-			255, 255 } }, { { 0, 255, 0 } }, { { 255, 128, 0 } }, { { 255, 255,
-			0 } }, { { 255, 0, 0 } }, { { 255, 0, 255 } },
-			{ { 255, 255, 255 } } };
+	static CvScalar colors[] = { { { 0, 0, 255 } },
+								 { { 0, 128, 255 } },
+								 { { 0,	255, 255 } },
+								 { { 0, 255, 0 } },
+								 { { 255, 128, 0 } },
+								 { { 255, 255, 0 } },
+								 { { 255, 0, 0 } },
+								 { { 255, 0, 255 } },
+								 { { 255, 255, 255 } }
+								};
 
-	IplImage* object = cvLoadImage(object_filename, CV_LOAD_IMAGE_GRAYSCALE );
-	//IplImage* image = cvLoadImage(scene_filename, CV_LOAD_IMAGE_GRAYSCALE );
-	if (!object) {
+	IplImage* object = cvLoadImage(object_filename, CV_LOAD_IMAGE_GRAYSCALE ); //load object image
+
+	if (!object) { //bad in arguments:
 		fprintf(stderr, "Can not load %s \n"
-			"Usage: find_obj [<object_filename>]\n[<hessianThreshold>]",
-				object_filename, hessianThreshold);
+			"Usage: ./main [<object_filename>]\n[<hessianThreshold>]\n[<enableLines>]",
+				object_filename, hessianThreshold, enableLines);
 		exit(-1);
 	}
+
 	IplImage* object_color = cvCreateImage(cvGetSize(object), 8, 3);
+
 	cvCvtColor(object, object_color, CV_GRAY2BGR );
 
 	CvSeq *objectKeypoints = 0, *objectDescriptors = 0;
 	CvSeq *imageKeypoints = 0, *imageDescriptors = 0;
 	int i;
 
-	CvSURFParams params = cvSURFParams(hessianThreshold, 1);
+	CvSURFParams params = cvSURFParams(hessianThreshold, 0);
+
 	params.extended=0;
 	params.nOctaveLayers=2;
 	params.nOctaves=4;
-//params.hessianThreshold=10;
 
-	double tt = (double) cvGetTickCount();
+
+	//double tt = (double) cvGetTickCount();
+
 	cvExtractSURF(object, 0, &objectKeypoints, &objectDescriptors, storage,
 			params);
 	printf("Object Descriptors: %d\n", objectDescriptors->total);
@@ -234,25 +243,39 @@ int main(int argc, char** argv) {
 	int	ancho = 640, alto = 480;
 	cvSetCaptureProperty(capture,CV_CAP_PROP_FRAME_WIDTH,ancho);
 	cvSetCaptureProperty(capture,CV_CAP_PROP_FRAME_HEIGHT,alto);
+
 while (true){
 	frame = cvQueryFrame( capture );
+	//cout<<"FPS: "<<cvGetCaptureProperty(capture, CV_CAP_PROP_FPS)<<endl; the camer it isn't support this method.
 	image = cvCreateImage(cvSize(frame->width,frame->height),frame->depth,1);
+	//cvShowImage("tmp", frame);
+
 	cvCvtColor(frame, image, CV_BGR2GRAY );
 
 	cvExtractSURF(image, 0, &imageKeypoints, &imageDescriptors, storage, params);
 	printf("Image Descriptors: %d\n", imageDescriptors->total);
-	tt = (double) cvGetTickCount() - tt;
-	printf("Extraction time = %gms\n", tt / (cvGetTickFrequency() * 1000.));
-	CvPoint src_corners[4] = { { 256, 156 }, { 429, 182 }, { 381,
-			411 }, { 212, 380} };
+
+	//tt = (double) cvGetTickCount() - tt;
+	//printf("Extraction time = %gms\n", tt / (cvGetTickFrequency() * 1000.));
+
+	/*CvPoint src_corners[4] = { { 256, 156 }, { 429, 182 }, { 381,
+			411 }, { 212, 380} };*/
+
+	CvPoint src_corners[4] = { { 0, 0 }, { object->width, 0 }, { object->width,
+				object->height }, { 0, object->height } };
+
 	CvPoint dst_corners[4];
+
 	IplImage* correspond = cvCreateImage(cvSize(image->width, object->height
 			+ image->height), 8, 1);
+
 	cvSetImageROI(correspond, cvRect(0, 0, object->width, object->height));
 	cvCopy(object, correspond);
+
 	cvSetImageROI(correspond, cvRect(0, object->height, correspond->width,
 			correspond->height));
 	cvCopy(image, correspond);
+
 	cvResetImageROI(correspond);
 
 #ifdef USE_FLANN
@@ -280,7 +303,7 @@ while (true){
 	findPairs( objectKeypoints, objectDescriptors, imageKeypoints, imageDescriptors, ptpairs );
 #endif
 
-	//linea unión puntos corresponedencia:
+	//linea union puntos corresponedencia:
 	if (enableLines){
 		for (i = 0; i < (int) ptpairs.size(); i += 2) {
 			CvSURFPoint* r1 = (CvSURFPoint*) cvGetSeqElem(objectKeypoints,
