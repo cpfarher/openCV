@@ -25,6 +25,7 @@ using namespace std;
 int tecla;
 IplImage *image = 0;
 IplImage* frame;
+
 double compareSURFDescriptors(const float* d1, const float* d2, double best,
 		int length) {
 	double total_cost = 0;
@@ -188,8 +189,10 @@ int locatePlanarObject(const CvSeq* objectKeypoints,
 int main(int argc, char** argv) {
 	const char* object_filename = (argc >= 2) ? argv[1]
 			: "./src/revi.jpg"; //default object image to search
+
 	double hessianThreshold = (argc >= 3) ? atof(argv[2]):250;
-	int enableLines = (argc >= 4) ? atof(argv[3]):0; //enable or dissable lines
+
+	int enableLines = (argc >= 4) ? atof(argv[3]):1; //enable or dissable lines
 
 	CvMemStorage* storage = cvCreateMemStorage(0);
 
@@ -216,9 +219,9 @@ int main(int argc, char** argv) {
 		exit(-1);
 	}
 
-	IplImage* object_color = cvCreateImage(cvGetSize(object), 8, 3);
+	IplImage* object_keypoints = cvCreateImage(cvGetSize(object), 8, 3);
 
-	cvCvtColor(object, object_color, CV_GRAY2BGR );
+	cvCvtColor(object, object_keypoints, CV_GRAY2BGR );
 
 	CvSeq *objectKeypoints = 0, *objectDescriptors = 0;
 	CvSeq *imageKeypoints = 0, *imageDescriptors = 0;
@@ -237,6 +240,21 @@ int main(int argc, char** argv) {
 			params);
 	printf("Object Descriptors: %d\n", objectDescriptors->total);
 
+	//surf points
+
+		for (i = 0; i < objectKeypoints->total; i++) {
+			CvSURFPoint* r = (CvSURFPoint*) cvGetSeqElem(objectKeypoints, i);
+			cout<<endl<<"("<<r->pt.x<<", "<<r->pt.y<<")="<<r->size<<" -- dir: "<<r->dir<<" -- hes: "<<r->hessian<<" -- lap: "<<r->laplacian;
+			CvPoint center;
+			int radius;
+			center.x = cvRound(r->pt.x);
+			center.y = cvRound(r->pt.y);
+			radius = cvRound(r->size * 1.2 / 9. * 2);
+			cvCircle(object_keypoints, center, radius, colors[0], 1, 8, 0);
+			cvLine(object_keypoints, center, center, colors[3], 2, 8, 0);
+		}
+		cvShowImage("Object Keypoints", object_keypoints);
+
 
 
 	CvCapture *capture = cvCreateCameraCapture( CV_CAP_ANY );
@@ -246,7 +264,7 @@ int main(int argc, char** argv) {
 
 while (true){
 	frame = cvQueryFrame( capture );
-	//cout<<"FPS: "<<cvGetCaptureProperty(capture, CV_CAP_PROP_FPS)<<endl; the camer it isn't support this method.
+	//cout<<"FPS: "<<cvGetCaptureProperty(capture, CV_CAP_PROP_FPS)<<endl; the camera it isn't support this method?
 	image = cvCreateImage(cvSize(frame->width,frame->height),frame->depth,1);
 	//cvShowImage("tmp", frame);
 
@@ -266,14 +284,15 @@ while (true){
 
 	CvPoint dst_corners[4];
 
-	IplImage* correspond = cvCreateImage(cvSize(image->width, object->height
-			+ image->height), 8, 1);
+
+	IplImage* correspond = cvCreateImage(cvSize(image->width+object->width, image->height), 8, 1);
 
 	cvSetImageROI(correspond, cvRect(0, 0, object->width, object->height));
 	cvCopy(object, correspond);
 
-	cvSetImageROI(correspond, cvRect(0, object->height, correspond->width,
+	cvSetImageROI(correspond, cvRect(object->width, 0, correspond->width,
 			correspond->height));
+
 	cvCopy(image, correspond);
 
 	cvResetImageROI(correspond);
@@ -290,8 +309,8 @@ while (true){
 		for (i = 0; i < 4; i++) {
 			CvPoint r1 = dst_corners[i % 4];
 			CvPoint r2 = dst_corners[(i + 1) % 4];
-			cvLine(correspond, cvPoint(r1.x, r1.y + object->height), cvPoint(
-					r2.x, r2.y + object->height), colors[8], 10);
+			cvLine(correspond, cvPoint(r1.x+object->width, r1.y), cvPoint(
+					r2.x+ object->width, r2.y), colors[8], 10);
 			//cvPutText(correspond, (const char *) "preuba", cvPoint(r1.x,r1.y + object->height), &texto_fuente, colors[8]);
 		}
 	}
@@ -310,8 +329,8 @@ while (true){
 					ptpairs[i]);
 			CvSURFPoint* r2 = (CvSURFPoint*) cvGetSeqElem(imageKeypoints, ptpairs[i
 					+ 1]);
-			cvLine(correspond, cvPointFrom32f(r1->pt), cvPoint(cvRound(r2->pt.x),
-					cvRound(r2->pt.y + object->height)), colors[8]);
+			cvLine(correspond, cvPointFrom32f(r1->pt), cvPoint(cvRound(r2->pt.x+object->width),
+					cvRound(r2->pt.y)), colors[8]);
 		}
 	}
 	cvShowImage("Object Correspond", correspond);

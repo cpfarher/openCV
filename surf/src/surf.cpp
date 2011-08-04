@@ -243,7 +243,7 @@ int main(int argc, char** argv) {
 			CvPoint r1 = dst_corners[i % 4];
 			CvPoint r2 = dst_corners[(i + 1) % 4];
 			cvLine(correspond, cvPoint(r1.x, r1.y + object->height), cvPoint(
-					r2.x, r2.y + object->height), colors[8]);
+					r2.x, r2.y + object->height), colors[8], 10);
 		}
 	}
 	vector<int> ptpairs;
