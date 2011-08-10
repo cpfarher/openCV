@@ -190,7 +190,7 @@ int main(int argc, char** argv) {
 	const char* object_filename = (argc >= 2) ? argv[1]
 			: "./src/revibarrio.jpg"; //default object image to search
 
-	double hessianThreshold = (argc >= 3) ? atof(argv[2]):250;
+	double hessianThreshold = (argc >= 3) ? atof(argv[2]):1000;
 
 	int enableLines = (argc >= 4) ? atof(argv[3]):1; //enable or dissable lines
 
