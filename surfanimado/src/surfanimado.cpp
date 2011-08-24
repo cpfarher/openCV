@@ -31,6 +31,7 @@ IplImage* frameDiferencia1;
 
 IplImage* framePrev;
 IplImage* correspond;
+IplImage* roi;
 //double areaTreshold=50.0;
 
 double compareSURFDescriptors(const float* d1, const float* d2, double best,
@@ -189,12 +190,12 @@ int locatePlanarObject(const CvSeq* objectKeypoints,
 		double X = (h[0] * x + h[1] * y + h[2]) * Z;
 		double Y = (h[3] * x + h[4] * y + h[5]) * Z;
 		dst_corners[i] = cvPoint(cvRound(X), cvRound(Y));
-/*
-		double rotationX = atan2 (h[0] , h[1]) * 180 / PI;
-			double rotationY = atan2 (h[6] , h[7]) * 180 / PI;
-			double rotationZ = atan2(h[3], h[4])* 180 / PI;;
+		/*
+		 double rotationX = atan2 (h[0] , h[1]) * 180 / PI;
+		 double rotationY = atan2 (h[6] , h[7]) * 180 / PI;
+		 double rotationZ = atan2(h[3], h[4])* 180 / PI;;
 
-			cout<<rotationX<<"        "<<rotationY<<"        "<<rotationZ<<endl;*/
+		 cout<<rotationX<<"        "<<rotationY<<"        "<<rotationZ<<endl;*/
 
 	}
 
@@ -210,31 +211,27 @@ int main(int argc, char** argv) {
 	const char* object_filename = (argc >= 2) ? argv[1]
 			: "./src/revibarrio.jpg"; //default object image to search
 
-	double hessianThreshold = (argc >= 3) ? atof(argv[2]):1000;
+	double hessianThreshold = (argc >= 3) ? atof(argv[2]) : 1000;
 
-	int enableLines = (argc >= 4) ? atof(argv[3]):0; //enable or dissable lines
+	int enableLines = (argc >= 4) ? atof(argv[3]) : 0; //enable or dissable lines
 
 	CvMemStorage* storage = cvCreateMemStorage(0);
 
 	cvNamedWindow("Object Correspond"); //create window for show image
 	cvNamedWindow("Frames difference"); //create window for show image
-
-	static CvScalar colors[] = { { { 0, 0, 255 } },
-								 { { 0, 128, 255 } },
-								 { { 0,	255, 255 } },
-								 { { 0, 255, 0 } },
-								 { { 255, 128, 0 } },
-								 { { 255, 255, 0 } },
-								 { { 255, 0, 0 } },
-								 { { 255, 0, 255 } },
-								 { { 255, 255, 255 } }
-								};
+	cvNamedWindow("roi");
+	static CvScalar colors[] = { { { 0, 0, 255 } }, { { 0, 128, 255 } }, { { 0,
+			255, 255 } }, { { 0, 255, 0 } }, { { 255, 128, 0 } }, { { 255, 255,
+			0 } }, { { 255, 0, 0 } }, { { 255, 0, 255 } },
+			{ { 255, 255, 255 } } };
 
 	IplImage* object = cvLoadImage(object_filename, CV_LOAD_IMAGE_GRAYSCALE ); //load object image
 
 	if (!object) { //bad in arguments:
-		fprintf(stderr, "Can not load %s \n"
-			"Usage: ./main [<object_filename>]\n[<hessianThreshold>]\n[<enableLines>]",
+		fprintf(
+				stderr,
+				"Can not load %s \n"
+					"Usage: ./main [<object_filename>]\n[<hessianThreshold>]\n[<enableLines>]",
 				object_filename, hessianThreshold, enableLines);
 		exit(-1);
 	}
@@ -249,10 +246,9 @@ int main(int argc, char** argv) {
 
 	CvSURFParams params = cvSURFParams(hessianThreshold, 0);
 
-	params.extended=0;
-	params.nOctaveLayers=2;
-	params.nOctaves=4;
-
+	params.extended = 0;
+	params.nOctaveLayers = 2;
+	params.nOctaves = 4;
 
 	//double tt = (double) cvGetTickCount();
 
@@ -263,176 +259,185 @@ int main(int argc, char** argv) {
 
 	//surf points
 
-		for (i = 0; i < objectKeypoints->total; i++) {
-			CvSURFPoint* r = (CvSURFPoint*) cvGetSeqElem(objectKeypoints, i);
+	for (i = 0; i < objectKeypoints->total; i++) {
+		CvSURFPoint* r = (CvSURFPoint*) cvGetSeqElem(objectKeypoints, i);
 
-			//uncomment the follow line for view objectKeypoints information
-			//cout<<endl<<"("<<r->pt.x<<", "<<r->pt.y<<")="<<r->size<<" -- dir: "<<r->dir<<" -- hes: "<<r->hessian<<" -- lap: "<<r->laplacian;
+		//uncomment the follow line for view objectKeypoints information
+		//cout<<endl<<"("<<r->pt.x<<", "<<r->pt.y<<")="<<r->size<<" -- dir: "<<r->dir<<" -- hes: "<<r->hessian<<" -- lap: "<<r->laplacian;
 
-			CvPoint center;
-			int radius;
-			center.x = cvRound(r->pt.x);
-			center.y = cvRound(r->pt.y);
-			radius = cvRound(r->size * 1.2 / 9. * 2);
-			cvCircle(object_keypoints, center, radius, colors[0], 1, 8, 0);
-			cvLine(object_keypoints, center, center, colors[3], 2, 8, 0);
-		}
-		cvShowImage("Object Keypoints", object_keypoints);
+		CvPoint center;
+		int radius;
+		center.x = cvRound(r->pt.x);
+		center.y = cvRound(r->pt.y);
+		radius = cvRound(r->size * 1.2 / 9. * 2);
+		cvCircle(object_keypoints, center, radius, colors[0], 1, 8, 0);
+		cvLine(object_keypoints, center, center, colors[3], 2, 8, 0);
+	}
+	cvShowImage("Object Keypoints", object_keypoints);
 
+	CvCapture *capture = cvCreateCameraCapture(CV_CAP_ANY);
+	int ancho = 640, alto = 480;
+	cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH, ancho);
+	cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT, alto);
 
-	CvCapture *capture = cvCreateCameraCapture( CV_CAP_ANY );
-	int	ancho = 640, alto = 480;
-	cvSetCaptureProperty(capture,CV_CAP_PROP_FRAME_WIDTH,ancho);
-	cvSetCaptureProperty(capture,CV_CAP_PROP_FRAME_HEIGHT,alto);
+	frame = cvQueryFrame(capture);
+	frameDiferencia = cvCreateImage(cvSize(frame->width, frame->height),
+			frame->depth, 1);
+	framePrev = cvCreateImage(cvSize(frame->width, frame->height),
+			frame->depth, 1);
+	frameDiferencia1 = cvCreateImage(cvSize(frame->width, frame->height),
+			frame->depth, 1);
+	image = cvCreateImage(cvSize(frame->width, frame->height), frame->depth, 1);//image over which detect the keypoints (real time detection)
+	correspond = cvCreateImage(cvSize(image->width + object->width,
+			image->height), 8, 1); //correspondence image
 
-	frame = cvQueryFrame( capture );
-	frameDiferencia = cvCreateImage(cvSize(frame->width,frame->height),frame->depth,1);
-	framePrev = cvCreateImage(cvSize(frame->width,frame->height),frame->depth,1);
-	frameDiferencia1 = cvCreateImage(cvSize(frame->width,frame->height),frame->depth,1);
-	image = cvCreateImage(cvSize(frame->width,frame->height),frame->depth,1);//image over which detect the keypoints (real time detection)
-	correspond = cvCreateImage(cvSize(image->width+object->width, image->height), 8, 1); //correspondence image
+	roi = cvCreateImage(cvSize(image->width + object->width,
+				image->height), 8, 1); //correspondence image
 
 	// start and end times
-	  time_t start, end;
-	  // fps calculated using number of frames / seconds
-	  double fps,  fpsprom, fpsprev;
-	  // frame counter
-	  int counter = 0;
-	  // floating point seconds elapsed since start
-	  double sec;
-	  // start the clock
+	time_t start, end;
+	// fps calculated using number of frames / seconds
+	double fps;
+	double fpsprom=0;
+	double fpsacum=0;
+	// frame counter
+	int counter = 0;
+	// floating point seconds elapsed since start
+	double sec;
+	// start the clock
 #ifdef USE_FLANN
 	printf("Using approximate nearest neighbor search\n");
 #endif
-	  time(&start);
+	time(&start);
 
-while (true){
-	frame = cvQueryFrame( capture );
+	while (true) {
+		frame = cvQueryFrame(capture);
 
-	//cout<<"FPS: "<<cvGetCaptureProperty(capture, CV_CAP_PROP_FPS)<<endl; the camera it isn't support this method?
+		//cout<<"FPS: "<<cvGetCaptureProperty(capture, CV_CAP_PROP_FPS)<<endl; the camera it isn't support this method?
 
-	//cvShowImage("tmp", frame);
+		//cvShowImage("tmp", frame);
 
-	cvCvtColor(frame, image, CV_BGR2GRAY );
+		cvCvtColor(frame, image, CV_BGR2GRAY );
 
-	/*BEGIN: show difference frames*/
-	cvAbsDiff(image,framePrev,frameDiferencia); //diferencia frame actual-anterior
-	cvCopy(image,framePrev); //copio el frame actual a un auxiliar para usar en la proxima iteracion
+		/*BEGIN: show difference frames*/
+		cvAbsDiff(image, framePrev, frameDiferencia); //diferencia frame actual-anterior
+		cvCopy(image, framePrev); //copio el frame actual a un auxiliar para usar en la proxima iteracion
 
-	cvThreshold(frameDiferencia, frameDiferencia, 50, 255, CV_THRESH_TOZERO);//CV_THRESH_BINARY
-	cvShowImage("Frames difference",frameDiferencia); //muestro el framediferencia
+		cvThreshold(frameDiferencia, frameDiferencia, 50, 255, CV_THRESH_TOZERO);//CV_THRESH_BINARY
+		cvShowImage("Frames difference", frameDiferencia); //muestro el framediferencia
 
-	/*END: show difference frames */
+		/*END: show difference frames */
 
-	cvExtractSURF(image, 0, &imageKeypoints, &imageDescriptors, storage, params);
-	printf("Image Descriptors: %d\n", imageDescriptors->total);
-
-	//tt = (double) cvGetTickCount() - tt;
-	//printf("Extraction time = %gms\n", tt / (cvGetTickFrequency() * 1000.));
-
-	/*CvPoint src_corners[4] = { { 256, 156 }, { 429, 182 }, { 381,
-			411 }, { 212, 380} };*/
-
-	CvPoint src_corners[4] = { { 0, 0 }, { object->width, 0 }, { object->width,
-				object->height }, { 0, object->height } };
-
-	CvPoint dst_corners[4];
+		cvExtractSURF(image, 0, &imageKeypoints, &imageDescriptors, storage,
+				params);
+		printf("Image Descriptors: %d\n", imageDescriptors->total);
 
 
-	cvSetImageROI(correspond, cvRect(0, 0, object->width, object->height));
-	cvCopy(object, correspond);
+		CvPoint src_corners[4] = { { 0, 0 }, { object->width, 0 }, {
+				object->width, object->height }, { 0, object->height } };
 
-	cvSetImageROI(correspond, cvRect(object->width, 0, correspond->width,
-			correspond->height));
+		CvPoint dst_corners[4];
 
-	cvCopy(image, correspond);
+		cvSetImageROI(correspond, cvRect(0, 0, object->width, object->height));
+		cvCopy(object, correspond);
 
-	cvResetImageROI(correspond);
+		/***********************/
+		cvSetImageROI(image, cvRect(0, 0, roi->width/2,
+								roi->height/2));
+		cvSetImageROI(roi, cvRect(0, 0, roi->width/2,
+						roi->height/2));
+		cvCopy(image, roi);
+		cvResetImageROI(image);
+		/*************************/
+		cvSetImageROI(correspond, cvRect(object->width, 0, correspond->width,
+				correspond->height));
+
+		cvCopy(image, correspond);
+
+		cvResetImageROI(correspond);
+
+		if (locatePlanarObject(objectKeypoints, objectDescriptors,
+				imageKeypoints, imageDescriptors, src_corners, dst_corners)) {
+			//		if (abs(((CvPoint) dst_corners[0]).y-((CvPoint) dst_corners[1]).y)*abs(((CvPoint) dst_corners[0]).x-((CvPoint) dst_corners[3]).x)>areaTreshold) {
+
+			for (i = 0; i < 4; i++) {
+				CvPoint r1 = dst_corners[i % 4]; //obtener punto inicial linea
+				CvPoint r2 = dst_corners[(i + 1) % 4]; //obtener punto final linea
 
 
-	//texto
-//	CvFont texto_fuente=cvFont(5.0,1.0);
-//	cvInitFont(& texto_fuente, 3, 5.0, 5.0);
+				cvLine(correspond, cvPoint(r1.x + object->width, r1.y),
+						cvPoint(r2.x + object->width, r2.y), colors[8], 10); //hacer linea entre punto inicial y final
 
-	if (locatePlanarObject(objectKeypoints, objectDescriptors, imageKeypoints,
-			imageDescriptors, src_corners, dst_corners)) {
-//		if (abs(((CvPoint) dst_corners[0]).y-((CvPoint) dst_corners[1]).y)*abs(((CvPoint) dst_corners[0]).x-((CvPoint) dst_corners[3]).x)>areaTreshold) {
+				//posicion esquinas del objeto buscado:
+				cout << "| " << ((CvPoint) dst_corners[i % 4]).x << "   "
+						<< ((CvPoint) dst_corners[i % 4]).y << endl;
+				//cout<<"area "<< abs(((CvPoint) dst_corners[0]).y-((CvPoint) dst_corners[1]).y)*abs(((CvPoint) dst_corners[0]).x-((CvPoint) dst_corners[3]).x)<<endl;
 
-		for (i = 0; i < 4; i++) {
-			CvPoint r1 = dst_corners[i % 4]; //obtener punto inicial linea
-			CvPoint r2 = dst_corners[(i + 1) % 4]; //obtener punto final linea
-
-
-			cvLine(correspond, cvPoint(r1.x+object->width, r1.y), cvPoint(
-					r2.x+ object->width, r2.y), colors[8], 10); //hacer linea entre punto inicial y final
-
-			//posicion esquinas del objeto buscado:
-			cout<<"| "<< ((CvPoint) dst_corners[i % 4]).x << "   "<<((CvPoint) dst_corners[i % 4]).y<<endl;
-			//cout<<"area "<< abs(((CvPoint) dst_corners[0]).y-((CvPoint) dst_corners[1]).y)*abs(((CvPoint) dst_corners[0]).x-((CvPoint) dst_corners[3]).x)<<endl;
-
+			}
 		}
-	}
-//	} //close area treshold
+		//	} //close area treshold
 
-	vector<int> ptpairs;
+		vector<int> ptpairs;
 #ifdef USE_FLANN
-	flannFindPairs(objectKeypoints, objectDescriptors, imageKeypoints,
-			imageDescriptors, ptpairs);
+		flannFindPairs(objectKeypoints, objectDescriptors, imageKeypoints,
+				imageDescriptors, ptpairs);
 #else
-	findPairs( objectKeypoints, objectDescriptors, imageKeypoints, imageDescriptors, ptpairs );
+		findPairs( objectKeypoints, objectDescriptors, imageKeypoints, imageDescriptors, ptpairs );
 #endif
 
-	//linea union puntos corresponedencia:
-	if (enableLines){
-		for (i = 0; i < (int) ptpairs.size(); i += 2) {
-			CvSURFPoint* r1 = (CvSURFPoint*) cvGetSeqElem(objectKeypoints,
-					ptpairs[i]);
-			CvSURFPoint* r2 = (CvSURFPoint*) cvGetSeqElem(imageKeypoints, ptpairs[i
-					+ 1]);
-			cvLine(correspond, cvPointFrom32f(r1->pt), cvPoint(cvRound(r2->pt.x+object->width),
-					cvRound(r2->pt.y)), colors[8]);
+		//linea union puntos corresponedencia:
+		if (enableLines) {
+			for (i = 0; i < (int) ptpairs.size(); i += 2) {
+				CvSURFPoint* r1 = (CvSURFPoint*) cvGetSeqElem(objectKeypoints,
+						ptpairs[i]);
+				CvSURFPoint* r2 = (CvSURFPoint*) cvGetSeqElem(imageKeypoints,
+						ptpairs[i + 1]);
+				cvLine(correspond, cvPointFrom32f(r1->pt), cvPoint(cvRound(
+						r2->pt.x + object->width), cvRound(r2->pt.y)),
+						colors[8]);
+			}
 		}
+		cvShowImage("Object Correspond", correspond);
+		cvShowImage("roi", roi);
+		//surf points
+		/*
+		 for (i = 0; i < objectKeypoints->total; i++) {
+		 CvSURFPoint* r = (CvSURFPoint*) cvGetSeqElem(objectKeypoints, i);
+		 CvPoint center;
+		 int radius;
+		 center.x = cvRound(r->pt.x);
+		 center.y = cvRound(r->pt.y);
+		 radius = cvRound(r->size * 1.2 / 9. * 2);
+		 cvCircle(object_color, center, radius, colors[0], 1, 8, 0);
+		 }
+		 cvShowImage("Object", object_color);
+		 */
+
+		time(&end);
+		// calculate current FPS
+		++counter;
+		sec = difftime(end, start);
+		fps = counter / sec;
+		fpsacum += fps;
+
+		fpsprom=(double)fpsacum/counter;
+		// will print out Inf until sec is greater than 0
+		printf("FPS = %.2f\n", fps);
+		printf("FPSProm = %.2f\n", fpsprom);
+		// Milisegundos de espera para reconocer la tecla presionada
+		tecla = cvWaitKey(1);
+
+		//If ESC key pressed, Key=0x10001B under OpenCV 0.9.7(linux version),
+		//remove higher bits using AND operator
+		if (((char) tecla & 255) == 27)
+			break;
+		//cvRelease((void **)&imageKeypoints);
+		//cvRelease((void **)&objectKeypoints);
 	}
-	cvShowImage("Object Correspond", correspond);
-	//surf points
-	/*
-		for (i = 0; i < objectKeypoints->total; i++) {
-			CvSURFPoint* r = (CvSURFPoint*) cvGetSeqElem(objectKeypoints, i);
-			CvPoint center;
-			int radius;
-			center.x = cvRound(r->pt.x);
-			center.y = cvRound(r->pt.y);
-			radius = cvRound(r->size * 1.2 / 9. * 2);
-			cvCircle(object_color, center, radius, colors[0], 1, 8, 0);
-		}
-		cvShowImage("Object", object_color);
-*/
-	//cvWaitKey(0);
-	// Milisegundos de espera para reconocer la tecla presionada
-			time(&end);
-		      // calculate current FPS
-		      ++counter;
-		      sec = difftime (end, start);
-
-		      fps = counter / sec;
-		      fpsprev=fps;
-		      fpsprom=(fpsprev+fps)/2.0;
-		      // will print out Inf until sec is greater than 0
-		      printf("FPS = %.2f\n", fps);
-		      printf("FPSProm = %.2f\n", fpsprom);
-
-		      tecla = cvWaitKey(1);
-
-
-			//If ESC key pressed, Key=0x10001B under OpenCV 0.9.7(linux version),
-			//remove higher bits using AND operator
-			if ( ((char)tecla & 255) == 27 ) break;
-			//cvRelease((void **)&imageKeypoints);
-			//cvRelease((void **)&objectKeypoints);
-}
 	cvDestroyWindow("Object");
 	cvDestroyWindow("Object SURF");
 	cvDestroyWindow("Object Correspond");
+	cvDestroyWindow("roi");
 
 	return 0;
 }
