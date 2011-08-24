@@ -420,7 +420,7 @@ int main(int argc, char** argv) {
 		fps = counter / sec;
 		fpsacum += fps;
 
-		fpsprom=(double)fpsacum/counter;
+		fpsprom=(double)((double)fpsacum/(double)counter);
 		// will print out Inf until sec is greater than 0
 		printf("FPS = %.2f\n", fps);
 		printf("FPSProm = %.2f\n", fpsprom);
