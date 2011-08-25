@@ -218,16 +218,29 @@ int main(int argc, char** argv) {
 	CvMemStorage* storage = cvCreateMemStorage(0);
 
 	cvNamedWindow("Object Correspond"); //create window for show image
-	cvNamedWindow("Frames difference"); //create window for show image
+	//cvNamedWindow("Frames difference"); //create window for show image
 	cvNamedWindow("roi");
 	static CvScalar colors[] = { { { 0, 0, 255 } }, { { 0, 128, 255 } }, { { 0,
 			255, 255 } }, { { 0, 255, 0 } }, { { 255, 128, 0 } }, { { 255, 255,
 			0 } }, { { 255, 0, 0 } }, { { 255, 0, 255 } },
 			{ { 255, 255, 255 } } };
 
-	IplImage* object = cvLoadImage(object_filename, CV_LOAD_IMAGE_GRAYSCALE ); //load object image
+	IplImage* object1 = cvLoadImage(object_filename, CV_LOAD_IMAGE_GRAYSCALE ); //load object image
+	IplImage* object=cvCreateImage(cvSize(object1->width/2,
+			object1->height/2), 8, 1); //correspondence image;
 
-	if (!object) { //bad in arguments:
+
+	cvSetImageROI(object1, cvRect(0, 0, object1->width/2,
+			object1->height/2));
+
+			cvCopy(object1, object);
+			cvResetImageROI(object1);
+
+
+
+
+
+			if (!object) { //bad in arguments:
 		fprintf(
 				stderr,
 				"Can not load %s \n"
@@ -320,11 +333,11 @@ int main(int argc, char** argv) {
 		cvCvtColor(frame, image, CV_BGR2GRAY );
 
 		/*BEGIN: show difference frames*/
-		cvAbsDiff(image, framePrev, frameDiferencia); //diferencia frame actual-anterior
-		cvCopy(image, framePrev); //copio el frame actual a un auxiliar para usar en la proxima iteracion
+		//cvAbsDiff(image, framePrev, frameDiferencia); //diferencia frame actual-anterior
+		//cvCopy(image, framePrev); //copio el frame actual a un auxiliar para usar en la proxima iteracion
 
-		cvThreshold(frameDiferencia, frameDiferencia, 50, 255, CV_THRESH_TOZERO);//CV_THRESH_BINARY
-		cvShowImage("Frames difference", frameDiferencia); //muestro el framediferencia
+		//cvThreshold(frameDiferencia, frameDiferencia, 50, 255, CV_THRESH_TOZERO);//CV_THRESH_BINARY
+		//cvShowImage("Frames difference", frameDiferencia); //muestro el framediferencia
 
 		/*END: show difference frames */
 
