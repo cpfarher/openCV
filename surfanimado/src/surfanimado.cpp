@@ -1,3 +1,6 @@
+//@todo: aplicar threads:
+// http://www.yolinux.com/TUTORIALS/LinuxTutorialPosixThreads.html
+
 /*
  * A Demo to OpenCV Implementation of SURF
  * Further Information Refer to "SURF: Speed-Up Robust Feature"
