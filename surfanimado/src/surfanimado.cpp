@@ -26,6 +26,7 @@ using namespace std;
 
 // define whether to use approximate nearest-neighbor search
 #define USE_FLANN
+
 int tecla;
 IplImage *image = 0;
 IplImage* frame;
@@ -105,8 +106,12 @@ void findPairs(const CvSeq* objectKeypoints, const CvSeq* objectDescriptors,
 	}
 }
 
-void flannFindPairs(const CvSeq*, const CvSeq* objectDescriptors, const CvSeq*,
-		const CvSeq* imageDescriptors, vector<int>& ptpairs) {
+void flannFindPairs(const CvSeq*,
+		const CvSeq* objectDescriptors,
+		const CvSeq*,
+		const CvSeq* imageDescriptors,
+		vector<int>& ptpairs) {
+
 	int length = (int) (objectDescriptors->elem_size / sizeof(float));
 
 	cv::Mat m_object(objectDescriptors->total, length, CV_32F);
@@ -229,6 +234,8 @@ int main(int argc, char** argv) {
 			{ { 255, 255, 255 } } };
 
 	IplImage* object1 = cvLoadImage(object_filename, CV_LOAD_IMAGE_GRAYSCALE ); //load object image
+
+
 	IplImage* object=cvCreateImage(cvSize(object1->width/2,
 			object1->height/2), 8, 1); //correspondence image;
 
