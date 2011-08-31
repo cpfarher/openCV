@@ -28,12 +28,15 @@ IplImage *image = 0;
 IplImage* frame;
 IplImage* frameDiferencia;
 IplImage* frameDiferencia1;
+IplImage* contourImage;
+IplImage* frameEroded;
+IplImage* frameDilated;
 
 IplImage* framePrev;
 IplImage* correspond;
 IplImage* roi;
 //double areaTreshold=50.0;
-
+CvRect boundingRect;
 double compareSURFDescriptors(const float* d1, const float* d2, double best,
 		int length) {
 	double total_cost = 0;
@@ -219,7 +222,11 @@ int main(int argc, char** argv) {
 
 	cvNamedWindow("Object Correspond"); //create window for show image
 	cvNamedWindow("Frames difference"); //create window for show image
-	cvNamedWindow("roi");
+	cvNamedWindow("After erode"); //create window for show image
+	cvNamedWindow("After dilate"); //create window for show image
+
+	cvNamedWindow("Contour image"); //create window for show image
+
 	static CvScalar colors[] = { { { 0, 0, 255 } }, { { 0, 128, 255 } }, { { 0,
 			255, 255 } }, { { 0, 255, 0 } }, { { 255, 128, 0 } }, { { 255, 255,
 			0 } }, { { 255, 0, 0 } }, { { 255, 0, 255 } },
@@ -255,6 +262,7 @@ int main(int argc, char** argv) {
 
 	cvExtractSURF(object, 0, &objectKeypoints, &objectDescriptors, storage,
 			params);
+
 	printf("Object Descriptors: %d\n", objectDescriptors->total);
 
 	//surf points
@@ -281,18 +289,28 @@ int main(int argc, char** argv) {
 	cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT, alto);
 
 	frame = cvQueryFrame(capture);
+
 	frameDiferencia = cvCreateImage(cvSize(frame->width, frame->height),
 			frame->depth, 1);
+
+	frameEroded = cvCreateImage(cvSize(frame->width, frame->height),
+				frame->depth, 1);
+
+	frameDilated = cvCreateImage(cvSize(frame->width, frame->height),
+					frame->depth, 1);
+	contourImage = cvCreateImage(cvSize(frame->width, frame->height),
+			frame->depth, 3);
 	framePrev = cvCreateImage(cvSize(frame->width, frame->height),
 			frame->depth, 1);
+
 	frameDiferencia1 = cvCreateImage(cvSize(frame->width, frame->height),
 			frame->depth, 1);
+
 	image = cvCreateImage(cvSize(frame->width, frame->height), frame->depth, 1);//image over which detect the keypoints (real time detection)
+
 	correspond = cvCreateImage(cvSize(image->width + object->width,
 			image->height), 8, 1); //correspondence image
 
-	roi = cvCreateImage(cvSize(image->width + object->width,
-				image->height), 8, 1); //correspondence image
 
 	// start and end times
 	time_t start, end;
@@ -323,13 +341,31 @@ int main(int argc, char** argv) {
 		cvAbsDiff(image, framePrev, frameDiferencia); //diferencia frame actual-anterior
 		cvCopy(image, framePrev); //copio el frame actual a un auxiliar para usar en la proxima iteracion
 
-		cvThreshold(frameDiferencia, frameDiferencia, 50, 255, CV_THRESH_TOZERO);//CV_THRESH_BINARY
+		cvThreshold(frameDiferencia, frameDiferencia, 50, 255, CV_THRESH_BINARY);//CV_THRESH_TOZERO
+		cvErode(frameDiferencia, frameEroded, NULL, 2);
+		cvDilate(frameEroded, frameDilated, NULL, 2);
+		boundingRect=cvBoundingRect(frameDilated,0);
+
+		cvSet(contourImage, cvScalar(0,0,0)); //repaint
+
+
+		cvRectangle(contourImage,cvPoint(boundingRect.x,boundingRect.y),
+		                    cvPoint(boundingRect.x+boundingRect.width,
+		                    boundingRect.y+boundingRect.height),
+		                    colors[3],1,8,0);
+
+
+		cvShowImage("Contour image", contourImage); //muestro el framediferencia
+
+		cvShowImage("After erode", frameEroded); //muestro el framediferencia
+		cvShowImage("After dilate", frameDilated); //muestro el framediferencia
 		cvShowImage("Frames difference", frameDiferencia); //muestro el framediferencia
 
 		/*END: show difference frames */
 
 		cvExtractSURF(image, 0, &imageKeypoints, &imageDescriptors, storage,
 				params);
+
 		printf("Image Descriptors: %d\n", imageDescriptors->total);
 
 
@@ -341,14 +377,6 @@ int main(int argc, char** argv) {
 		cvSetImageROI(correspond, cvRect(0, 0, object->width, object->height));
 		cvCopy(object, correspond);
 
-		/***********************/
-		cvSetImageROI(image, cvRect(0, 0, roi->width/2,
-								roi->height/2));
-		cvSetImageROI(roi, cvRect(0, 0, roi->width/2,
-						roi->height/2));
-		cvCopy(image, roi);
-		cvResetImageROI(image);
-		/*************************/
 		cvSetImageROI(correspond, cvRect(object->width, 0, correspond->width,
 				correspond->height));
 
@@ -437,7 +465,8 @@ int main(int argc, char** argv) {
 	cvDestroyWindow("Object");
 	cvDestroyWindow("Object SURF");
 	cvDestroyWindow("Object Correspond");
-	cvDestroyWindow("roi");
+	cvDestroyWindow("After erode");
+	cvDestroyWindow("After dilate");
 
 	return 0;
 }
